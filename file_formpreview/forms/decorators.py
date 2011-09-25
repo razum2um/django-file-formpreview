@@ -1,5 +1,6 @@
 import os
 import tempfile
+from datetime import datetime
 
 try:
     from cStringIO import StringIO
@@ -10,7 +11,7 @@ from django import forms
 from django.conf import settings
 
 from file_formpreview.forms.fields import *
-from file_formpreview.forms.utils import mkdir_p
+from file_formpreview.forms.utils import mkdir_p, security_hash
 
 SUFFIX = getattr(settings, 'SUFFIX', '_preview') # suffix to preview fields
 
@@ -44,7 +45,9 @@ def full_clean(stage):
         if form.files: # i.e. if request.POST
             for fname, field in form.fields.items():
                 # store file, add path
-                if isinstance(field, PreviewField) and stage == 'preview':
+                if (isinstance(field, forms.FileField) or \
+                        isinstance(field, forms.ImageField)) and \
+                        stage == 'preview':
                     # work around: first fetch file, then drop field, as
                     # it cannot be used in security hash calculation
                     fd = StringIO()
