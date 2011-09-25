@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Submit your file</h1>
+
+<form action="" enctype="multipart/form-data" method="post">{% csrf_token %}
+    <table>
+        {{ form }}
+    </table>
+    <input type="hidden" name="{{ stage_field }}" value="1" />
+    {% if form.errors %}
+        <h1>Please correct the following errors</h1>{{ form.errors }}
+    {% endif %}
+    <p><input type="submit" value="Preview" /></p>
+</form>
+
+{% endblock %}
