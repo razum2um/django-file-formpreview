@@ -32,35 +32,34 @@ Usage
 
     # forms.py:
 
-    class MyForm(forms.Form):
+    from file_formpreview import FileFormPreview
+
+    class MyFileFormPreview(FileFormPreview):
         ...
+        [upload_tmp = '...']
+        [form_template = '...']
+        [preview_template = '...']
         ...
         def done(self, request, cleaned_data):
-        """
-        Does something with the cleaned_data and returns an
-        HttpResponseRedirect.
-        """
-        ...
+            """
+            Does something with the cleaned_data and returns an
+            HttpResponseRedirect.
+            """
+            ...
 
     # urls.py:
 
-    from my_forms import MyForm
-    from file_preview import FileFormPreview
+    from my_forms import MyForm, MyFileFormPreview
 
-    url('^add-upload/$', FileFormPreview(
-            MyForm, 
-            [upload_tmp='...',]
-            [preview_template='...',]
-            [form_template='...'])
+    url('^add-upload/$', FileFormPreview(MyForm)
 
     OR views.py:
     
-    from my_forms import MyForm
-    from file_preview import FileFormPreview
+    from my_forms import MyForm, MyFileFormPreview
 
     def add_upload(request):
         ...
-        return FilePreviewForm(MyForm)(request)
+        return MyFilePreviewForm(MyForm)(request)
 
 Default upload_tmp = ``settings.MEDIA_ROOT``, 
 it creates under it following structure: ``YYYmmdd/<hash>/file_name.ext``
