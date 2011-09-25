@@ -1,7 +1,7 @@
 Django File FormPreview
 ===========
 
-The package provides functionality written in `bug#7808 <https://code.djangoproject.com/ticket/7808>`_.
+The package provides functionality written in `bug#7808 <https://code.djangoproject.com/ticket/7808>`_
 
 Technical notes
 ---------------
@@ -95,5 +95,6 @@ Notes
 =====
 
 **ATTENTION:** library doesn't check vulnerabilities like script uploads
+
 **Make sure you've setup webserver not to execute files from MEDIA_ROOT
 or give other upload_tmp parameter**
