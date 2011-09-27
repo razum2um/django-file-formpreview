@@ -70,8 +70,9 @@ Usage
         return MyFilePreviewForm(MyForm)(request)
 
 it creates under it following structure: ``<settings.UPLOAD_DIR>/<YYYmmdd>/<hash>/<uploaded_file_name.ext>``
-``<YYmmdd>`` is somethind like "20110926"
-``<hash>`` is unique value calculated for every form
+
+* ``<YYmmdd>`` is somethind like "20110926"
+* ``<hash>`` is unique value calculated for every form
 
 Default templates will behave like this:
 
@@ -85,8 +86,8 @@ Available in settings.py:
 
 * UPLOAD_DIR - default: ``os.path.join(settings.MEDIA_ROOT, 'preview'))`` (**Note: it is autocleaned!**)
 * OUTDATED_DAYS - default: 2, leave only todays+yesterdays, everything older in UPLOAD_DIR gets removed
-* PREVIEW_SUFFIX - default: '_preview', are hidden, store paths to uploaded files
-* PATH_SUFFIX - default: '_path', render them in preview stage
+* PREVIEW_SUFFIX - default: '_preview' , render them in preview stage
+* PATH_SUFFIX - default: '_path' , are hidden, store paths to uploaded files
 
 Available properties in your FileFormPreview subclass:
 
