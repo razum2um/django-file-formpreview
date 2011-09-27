@@ -230,7 +230,7 @@ class FileFormPreview(object):
         Subclasses may want to take into account request-specific information,
         such as the IP address.
         """
-        return security_hash(request, form)
+        return security_hash(form)
 
     def failed_hash(self, request):
         "Returns an HttpResponse in the case of an invalid security hash."

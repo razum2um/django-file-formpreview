@@ -19,13 +19,15 @@ def mkdir_p(path):
             pass
         else: raise
 
-def security_hash(request, form, *args):
+def security_hash(form, *args):
     """
     Calculates a security hash for the given Form instance.
 
     This creates a list of the form field names/values in a deterministic
     order, pickles the result with the SECRET_KEY setting, then takes an md5
     hash of that.
+    
+    UPD: remove dependance from request, hash FileField.file.name instead of context
     """
     import warnings
     warnings.warn("security_hash is deprecated; use form_hmac instead",
