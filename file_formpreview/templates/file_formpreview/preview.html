@@ -27,7 +27,7 @@
 
 <form action="" enctype="multipart/form-data" method="post">{% csrf_token %}
     <table>
-        {{ form }}
+        {{ original_form }}
     </table>
     <input type="hidden" name="{{ stage_field }}" value="1" />
     <p><input type="submit" value="Preview" /></p>

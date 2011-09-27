@@ -15,26 +15,28 @@ from file_formpreview.forms.utils import mkdir_p, security_hash
 
 SUFFIX = getattr(settings, 'SUFFIX', '_preview') # suffix to preview fields
 
-def full_clean(stage):
+def full_clean(stage, method):
     """
     A decorator, that returns different ``full_clean`` methods
     depending on the stage
 
     Trick is:
-    in preview stage after running `full_clean` on original form
-    drop all previews and fill-in *_path fields because:
-        - it's needed by `get_security_hash` as it wont hash files
-        - after preview stage in POST it wont pass validation anyway
+    in ``preview_post`` stage after running ``full_clean`` on original form
+        - it drops all file fields and fill-in *_path fields
 
-    in post stage it just:
-        - removes preview fields BEFORE validation
+    because after in ``post_post`` stage it wont pass validation anyway,
+    user doesn't upload file twice
+
+    in ``post_post`` stage it just:
+        - removes file fields BEFORE validation (no upload was done)
         - pushes tmp-paths into 'cleaned_data'
+
     as user is interested in that vary value in `done` function,
     anyway, ModelForm uses it for saving instance, too
     """
     def wrapper(form):
 
-        if stage == 'post':
+        if stage == 'post' and method == 'post':
             for fname, field in form.fields.items():
                 if isinstance(field, PreviewPathField):
                     original_fname = fname.replace(SUFFIX, '')
@@ -42,23 +44,13 @@ def full_clean(stage):
 
         super(form.__class__, form).full_clean()
 
-        if form.files: # i.e. if request.POST
+        #if form.files: # i.e. if request.POST
+        if stage == 'preview' and method == 'post':
             for fname, field in form.fields.items():
                 # store file, add path
-                if (isinstance(field, forms.FileField) or \
-                        isinstance(field, forms.ImageField)) and \
-                        stage == 'preview':
-                    # work around: first fetch file, then drop field, as
-                    # it cannot be used in security hash calculation
-                    fd = StringIO()
-                    upload = form.files[fname]
-                    for chunk in upload.chunks():
-                        fd.write(chunk)
-                    fd.seek(0)
+                if isinstance(field, forms.FileField) or \
+                        isinstance(field, forms.ImageField):
 
-                    form.fields.pop(fname)
-
-                    # create dirs for tmp file
                     # FIXME: still passed request as None, as not needed
                     tmp_dir = os.path.join(
                         settings.MEDIA_ROOT,
@@ -67,18 +59,27 @@ def full_clean(stage):
                         security_hash(None, form)) 
                     mkdir_p(tmp_dir)
 
-                    tmp_file = tempfile.NamedTemporaryFile(dir=tmp_dir, delete=False)
-                    tmp_file.write(fd.read())
-                    tmp_file.flush()
+                    fd = tempfile.NamedTemporaryFile(dir=tmp_dir, delete=False)
+                    upload = form.files[fname]
+                    for chunk in upload.chunks():
+                        fd.write(chunk)
+                    fd.flush()
+
+                    form.fields.pop(fname)
 
                     preview_fname = fname + SUFFIX
-                    form.cleaned_data[preview_fname] = tmp_file.name
-                    form.data[preview_fname] = tmp_file.name # actually used for initial
+                    # for view
+                    form.cleaned_data[preview_fname] = fd.name
 
-                elif isinstance(field, PreviewPathField) and stage == 'post':
+                    # for template, actually - initial
+                    form.data[preview_fname] = fd.name
+
+        elif stage == 'post' and method == 'post':
+            for fname, field in form.fields.items():
+                if isinstance(field, PreviewPathField):
                     original_fname = fname.replace(SUFFIX, '')
                     fd = StringIO()
-                    with open(form.cleaned_data[original_fname]) as tmp_file:
+                    with open(form.cleaned_data[fname]) as tmp_file:
                         fd.write(tmp_file.read())
                     fd.seek(0)
                     form.cleaned_data[original_fname] = fd

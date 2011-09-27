@@ -55,8 +55,12 @@ class FileFormPreview(object):
 
         Btw, http.QueryDict is immutable, too 
         """
+        assert getattr(self, 'method', None) is not None, \
+            '%(cls)s.form is used before %(cls)s calling. no %(cls).method defined' % \
+            {'cls':self.__class__.__name__}
+
         assert getattr(self, 'stage', None) is not None, \
-            '%(cls)s.preview_form is used before %(cls)s calling' % \
+            '%(cls)s.form is used before %(cls)s calling. no %(cls).stage defined' % \
             {'cls':self.__class__.__name__}
 
         #if not self._preview_form_klass:
@@ -80,16 +84,14 @@ class FileFormPreview(object):
                     widget=widget)})
 
         self._preview_form_klass = type(name, (base,), namespace)
-        if self.stage == 'preview':
-            self._preview_form_klass.full_clean = full_clean('preview')
-        else:
-            self._preview_form_klass.full_clean = full_clean('post')
+        self._preview_form_klass.full_clean = full_clean(self.stage, self.method)
 
         return self._preview_form_klass
 
     def __call__(self, request, *args, **kwargs):
         "UPD: store current stage"
         self.stage = {'1': 'preview', '2': 'post'}.get(request.POST.get(self.unused_name('stage')), 'preview')
+        self.method = request.method.lower()
         self.parse_params(*args, **kwargs)
         try:
             method = getattr(self, self.stage + '_' + request.method.lower())
