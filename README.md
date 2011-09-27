@@ -7,11 +7,19 @@ Technical notes
 ---------------
 
 It provides two-step form submitting and actually inherit from ``django.contrib.formtools.FormPreview``.
+
 First, it validates form, uploads file and stores its name.
+
 Then, it injects needing *_path fields to point correspondong files
+
 In the second POST step it uses path given in the hidden *_path fields.
 
-Trying to submit another fiel path will fail, because file path depends on hash,
+Additionally, it can render some fields from original form, if they are subclassed from ``PreviewField``
+
+Security
+--------
+
+Trying to submit another file path will fail, because file path depends on hash,
 which is calculated from:
 
 * other form field values
@@ -48,9 +56,9 @@ Usage
 
     # urls.py:
 
-    from my_forms import MyForm, MyFileFormPreview
+        from my_forms import MyForm, MyFileFormPreview
 
-    url('^add-upload/$', FileFormPreview(MyForm)
+        url('^add-upload/$', FileFormPreview(MyForm)
 
     OR views.py:
     
@@ -67,7 +75,6 @@ it creates under it following structure: ``<settings.UPLOAD_DIR>/<YYYmmdd>/<hash
 Default templates will behave like this:
 
 * for PreviewFileField => prints first 1024 bytes (raw), see PreviewFileWidget
-
 * for PreviewImageField => displays the image (see Notes), see PreviewImageWidget
 
 Configuration
@@ -76,9 +83,7 @@ Configuration
 Available in settings.py:
 
 * UPLOAD_DIR - default: ``os.path.join(settings.MEDIA_ROOT, 'preview'))`` (**Note: it is autocleaned!**)
-
 * OUTDATED_DAYS - default: 2, leave only todays+yesterdays, everything older in UPLOAD_DIR gets removed
-
 * SUFFIX - default: '_preview', show these fields.data in ``preview_template``
 
 Available properties in your FileFormPreview subclass:
@@ -87,7 +92,7 @@ Available properties in your FileFormPreview subclass:
 
 Available preview render configuration:
 
-* subclass needed Widget and rewrite ``render`` method
+* subclass needed Widget, pass it as parameter to ``PreviewField`` and rewrite ``render`` method
 
 Custom Preview Handling
 -----------------------
