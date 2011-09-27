@@ -15,10 +15,11 @@ from file_formpreview.forms.fields import *
 from file_formpreview.forms.utils import mkdir_p, security_hash
 
 SUFFIX = getattr(settings, 'SUFFIX', '_preview') # suffix to preview fields
-OUTDATED_DAYS = getattr(settings, 'OUTDATED_DAYS', 1)  # mark yesterdays dirs for deletion
+UPLOAD_DIR = getattr(settings, 'UPLOAD_DIR', os.path.join(settings.MEDIA_ROOT, 'preview'))
+OUTDATED_DAYS = getattr(settings, 'OUTDATED_DAYS', 2)  # mark yesterdays dirs for deletion
 
-if OUTDATED_DAYS < 1:
-    OUTDATED_DAYS = 1  # dont allow to remove todays temponaries
+if OUTDATED_DAYS < 2:
+    OUTDATED_DAYS = 2  # dont allow to remove todays temponaries
 
 def full_clean(stage, method):
     """
@@ -54,13 +55,9 @@ def full_clean(stage, method):
                 if isinstance(field, forms.FileField) or \
                         isinstance(field, forms.ImageField):
 
-                    upload_dir = os.path.join(
-                        settings.MEDIA_ROOT,
-                        'uploads')
-
                     todays_dir = datetime.now().strftime('%Y%m%d')
                     tmp_dir = os.path.join(
-                        upload_dir,
+                        UPLOAD_DIR,
                         todays_dir,
                         security_hash(form)) 
                     mkdir_p(tmp_dir)
@@ -68,11 +65,11 @@ def full_clean(stage, method):
                     # autoclean all previous files because in this format
                     # int(yesterday_name) < int(today_name)
                     outdates_dirs = []
-                    for name in os.listdir(upload_dir):
+                    for name in os.listdir(UPLOAD_DIR):
                         try:
                             int(name)
                         except ValueError:
-                            pass
+                            outdates_dirs.append(name)
                         else:
                             if int(name) <= int(todays_dir) - OUTDATED_DAYS:
                                 outdates_dirs.append(name)

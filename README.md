@@ -61,8 +61,7 @@ Usage
         ...
         return MyFilePreviewForm(MyForm)(request)
 
-Default upload_tmp = ``settings.MEDIA_ROOT``, 
-it creates under it following structure: ``YYYmmdd/<hash>/file_name.ext``
+it creates under it following structure: ``<settings.UPLOAD_DIR>/YYYmmdd/<hash>/file_name.ext``
 ``YYmmdd`` is somethind like "20110926"
 ``<hash>`` is unique value calculated for every form
 
@@ -71,6 +70,21 @@ Default templates will behave like this:
 * for FileField => prints first 1024 bytes (raw)
 
 * for ImageField => displays the image (see Notes)
+
+Configuration
+-------------
+
+Available in settings.py:
+
+* UPLOAD_DIR - default: ``os.path.join(settings.MEDIA_ROOT, 'preview'))`` (**Note: it is autocleaned!**)
+
+* OUTDATED_DAYS - default: 2, leave only todays+yesterdays, everything older in UPLOAD_DIR gets removed
+
+* SUFFIX - default: '_preview', show these fields.data in ``preview_template``
+
+Available properties in your FileFormPreview subclass:
+
+* preview_template, form_template - default: 'file_formpreview/preview.html', 'file_formpreview/form.html' respectively
 
 Custom Preview Handling
 -----------------------
