@@ -36,7 +36,6 @@ Usage
 
     class MyFileFormPreview(FileFormPreview):
         ...
-        [upload_tmp = '...']
         [form_template = '...']
         [preview_template = '...']
         ...
@@ -61,15 +60,15 @@ Usage
         ...
         return MyFilePreviewForm(MyForm)(request)
 
-it creates under it following structure: ``<settings.UPLOAD_DIR>/YYYmmdd/<hash>/file_name.ext``
-``YYmmdd`` is somethind like "20110926"
+it creates under it following structure: ``<settings.UPLOAD_DIR>/<YYYmmdd>/<hash>/<uploaded_file_name.ext>``
+``<YYmmdd>`` is somethind like "20110926"
 ``<hash>`` is unique value calculated for every form
 
 Default templates will behave like this:
 
-* for FileField => prints first 1024 bytes (raw)
+* for PreviewFileField => prints first 1024 bytes (raw), see PreviewFileWidget
 
-* for ImageField => displays the image (see Notes)
+* for PreviewImageField => displays the image (see Notes), see PreviewImageWidget
 
 Configuration
 -------------
@@ -85,6 +84,10 @@ Available in settings.py:
 Available properties in your FileFormPreview subclass:
 
 * preview_template, form_template - default: 'file_formpreview/preview.html', 'file_formpreview/form.html' respectively
+
+Available preview render configuration:
+
+* subclass needed Widget and rewrite ``render`` method
 
 Custom Preview Handling
 -----------------------
