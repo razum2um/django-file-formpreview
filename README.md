@@ -6,7 +6,8 @@ The package provides functionality written in `bug#7808 <https://code.djangoproj
 Technical notes
 ---------------
 
-It provides two-step form submitting and actually inherit from ``django.contrib.formtools.FormPreview``.
+It provides two-step form submitting and actually based on ``django.contrib.formtools.FormPreview``, 
+but there are many updates, so it isn't subclassed
 
 First, it validates form, uploads file and stores its name.
 
@@ -14,7 +15,7 @@ Then, it injects needing *_path fields to point correspondong files
 
 In the second POST step it uses path given in the hidden *_path fields.
 
-Additionally, it can render some fields from original form, if they are subclassed from ``PreviewField``
+Additionally, it can render some fields from original form, if they are subclassed from ``PreviewField`` as *_preview fields
 
 Security
 --------
@@ -84,7 +85,8 @@ Available in settings.py:
 
 * UPLOAD_DIR - default: ``os.path.join(settings.MEDIA_ROOT, 'preview'))`` (**Note: it is autocleaned!**)
 * OUTDATED_DAYS - default: 2, leave only todays+yesterdays, everything older in UPLOAD_DIR gets removed
-* SUFFIX - default: '_preview', show these fields.data in ``preview_template``
+* PREVIEW_SUFFIX - default: '_preview', are hidden, store paths to uploaded files
+* PATH_SUFFIX - default: '_path', render them in preview stage
 
 Available properties in your FileFormPreview subclass:
 
