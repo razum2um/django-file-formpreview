@@ -94,21 +94,6 @@ Available preview render configuration:
 
 * subclass needed Widget, pass it as parameter to ``PreviewField`` and rewrite ``render`` method
 
-Custom Preview Handling
------------------------
-
-Just define some methods with ``_preview`` suffix in your Form::
-
-    class MyForm(forms.Form):
-        my_file = forms.FileField(...)
-        my_image = forms.ImageField(...)
-
-        def my_file_preview(self, local_path):
-            return open(local_path).read(1024)
-
-        def my_image_preview(self, local_path):
-            return mark_safe('<img src="/media/%s" />' % local_path) 
-
 If you need something else, subclass FileFormPreview and implement ``process_preview``
 to get extended context in the preview template
 
