@@ -12,25 +12,41 @@ class PreviewField(object):
 
     Owerride them directly
     """
-    preview_widget = PreviewFileWidget
+    pass
+    #preview_widget = PreviewFileWidget
+    #@property
+    #def widget(self):
+    #    raise NotImplementedError(
+    #        "Define wigdet property in your %(cls)s declaration" % \
+    #        self.__class__.__name__)
 
-    def _pre_init(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs):
         """ Detect some missing arguments passed to __init__ """
 
         if 'preview_widget' in kwargs:
             self.preview_widget = kwargs.pop('preview_widget')
 
-class PreviewPathField(forms.CharField):
-    pass
+        # as THIS class is first in __bases__ -> we cannot call ``super``
+        # FIXME: make it more explicit
+        assert len(self.__class__.__bases__) == 2, ('Please, \
+            use multiple inheritance for %(cls)s' % self.__class__.__name__)
 
-class PreviewFileField(forms.FileField, PreviewField):
+        field_klass = self.__class__.__bases__[1]
+        field_klass.__init__(self, *args, **kwargs)
+        
+
+# these are for you: define your form fieldswith them
+
+class PreviewFileField(PreviewField, forms.FileField):
     preview_widget = PreviewFileWidget
-    def __init__(self, *args, **kwargs):
-        self._pre_init(self, *args, **kwargs)
-        super(PreviewFileField, self).__init__(*args, **kwargs)
 
-class PreviewImageField(forms.ImageField, PreviewField):
+class PreviewImageField(PreviewField, forms.ImageField):
     preview_widget = PreviewImageWidget
-    def __init__(self, *args, **kwargs):
-        self._pre_init(self, *args, **kwargs)
-        super(PreviewImageField, self).__init__(*args, **kwargs)
+
+
+# this is for me :) 
+
+class PreviewPathField(forms.CharField):
+    widget = forms.HiddenInput
+
+

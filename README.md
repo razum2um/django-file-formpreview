@@ -35,7 +35,7 @@ Usage
 
     INSTALLED_APPS = (
         ...
-        'file_preview',
+        'file_formpreview',
         ...
     )
 

@@ -1,8 +1,10 @@
 from django import forms
-from file_formpreview import FileFormPreview
+
+from file_formpreview.forms.fields import PreviewFileField, PreviewImageField
+from file_formpreview.forms.forms import FileFormPreview
 
 class MyForm(forms.Form):
-    raw_file = forms.FileField(u'Raw file')
+    raw_file = PreviewFileField(u'Raw file')
 
 class MyFileFormPreview(FileFormPreview):
     pass

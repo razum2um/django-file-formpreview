@@ -14,7 +14,8 @@ from django.conf import settings
 from file_formpreview.forms.fields import *
 from file_formpreview.forms.utils import mkdir_p, security_hash
 
-SUFFIX = getattr(settings, 'SUFFIX', '_preview') # suffix to preview fields
+PREVIEW_SUFFIX = getattr(settings, 'PREVIEW_SUFFIX', '_preview')  # suffix to preview fields
+PATH_SUFFIX = getattr(settings, 'PATH_SUFFIX', '_path')  # suffix to preview fields
 UPLOAD_DIR = getattr(settings, 'UPLOAD_DIR', os.path.join(settings.MEDIA_ROOT, 'preview'))
 OUTDATED_DAYS = getattr(settings, 'OUTDATED_DAYS', 2)  # mark yesterdays dirs for deletion
 
@@ -83,20 +84,26 @@ def full_clean(stage, method):
                     for chunk in upload.chunks():
                         fd.write(chunk)
                     fd.flush()
+                    # descriptor remains to be open
+                    # re-seek to render it preperly
+                    #fd.seek(0)
 
                     form.fields.pop(fname)
 
-                    preview_fname = fname + SUFFIX
-                    # for view
-                    form.cleaned_data[preview_fname] = fd.name
+                    path_fname = fname + PATH_SUFFIX
+                    form.cleaned_data[path_fname] = fd.name  # in view
+                    form.data[path_fname] = fd.name  # in template, as initial
 
-                    # for template, actually - initial
-                    form.data[preview_fname] = fd.name
+                    #if isinstance(field, PreviewField):
+                    #    preview_fname = fname + PREVIEW_SUFFIX
+                    #    form.cleaned_data[preview_fname] = fd  # in view
+                    #    form.data[preview_fname] = fd  # in template, as initial
+
 
         elif stage == 'post' and method == 'post':
             for fname, field in form.fields.items():
                 if isinstance(field, PreviewPathField):
-                    original_fname = fname.replace(SUFFIX, '')
+                    original_fname = fname.replace(PATH_SUFFIX, '')
                     fd = StringIO()
                     with open(form.cleaned_data[fname]) as tmp_file:
                         fd.write(tmp_file.read())

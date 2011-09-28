@@ -21,7 +21,8 @@ from file_formpreview.forms.utils import security_hash
 from file_formpreview.forms.fields import *
 from file_formpreview.forms.widgets import *
 
-SUFFIX = getattr(settings, 'SUFFIX', '_preview') # suffix to preview fields
+PREVIEW_SUFFIX = getattr(settings, 'PREVIEW_SUFFIX', '_preview')  # suffix to preview fields
+PATH_SUFFIX = getattr(settings, 'PATH_SUFFIX', '_path')  # suffix to preview fields
 
 AUTO_ID = 'formtools_%s' # Each form here uses this as its auto_id parameter.
 
@@ -73,15 +74,23 @@ class FileFormPreview(object):
 
         for fname, field in namespace['base_fields'].iteritems():
             if isinstance(field, forms.FileField):
-                namespace['base_fields'].update({fname+SUFFIX: PreviewPathField(
-                    label='%s%s' % (fname, SUFFIX.lower()) , 
-                    required=False,
-                    widget=widget)})
+                namespace['base_fields'].update({
+                    fname + PATH_SUFFIX: PreviewPathField(
+                        label='%s%s' % (fname, PATH_SUFFIX.lower()) , 
+                        required=False)})
+
+                if isinstance(field, PreviewField):
+                    namespace['base_fields'].update({
+                        fname + PREVIEW_SUFFIX: forms.Field(
+                            label='%s%s' % (fname, PREVIEW_SUFFIX.lower()),
+                            required=False,
+                            widget=((self.stage == 'preview' and self.method == 'post') and field.preview_widget or forms.HiddenInput))})
+
             elif isinstance(field, forms.ImageField):
-                namespace['base_fields'].update({fname+SUFFIX: PreviewImageField(
-                    label='%s path' % fname, 
-                    required=False,
-                    widget=widget)})
+                namespace['base_fields'].update({
+                    fname + PATH_SUFFIX: PreviewPathField(
+                        label='%s path' % fname, 
+                        required=False)})
 
         self._preview_form_klass = type(name, (base,), namespace)
         self._preview_form_klass.full_clean = full_clean(self.stage, self.method)
