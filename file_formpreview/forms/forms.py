@@ -8,6 +8,8 @@ try:
 except ImportError:
     import pickle
 
+from copy import deepcopy, copy
+
 from django import forms
 from django.conf import settings
 from django.http import Http404
@@ -32,10 +34,9 @@ class FileFormPreview(object):
     preview_template = 'file_formpreview/preview.html'
     form_template = 'file_formpreview/form.html'
 
-    def __init__(self, form_klass, preview_form_klass=None):
+    def __init__(self, form_klass):
         "UPD: make self.form dynamic"
         self._form_klass = form_klass
-        self._preview_form_klass = preview_form_klass
         self.state = {}
 
     @property
@@ -65,36 +66,37 @@ class FileFormPreview(object):
             {'cls':self.__class__.__name__}
 
         #if not self._preview_form_klass:
-        base = self._form_klass
-        name = base.__class__.__name__ + 'Preview'
-        namespace = dict(base.__dict__)
+        bases = (self._form_klass,)
+        name = self._form_klass.__name__ + 'Preview'
+        namespace = self._form_klass.__dict__.copy()
         
-        # action stores uploaded file temponary
-        widget = forms.HiddenInput
-
+        additional_fields = {}
         for fname, field in namespace['base_fields'].iteritems():
-            if isinstance(field, forms.FileField):
-                namespace['base_fields'].update({
+            if isinstance(field, forms.FileField) or isinstance(field, forms.ImageField):
+                additional_fields.update({
                     fname + PATH_SUFFIX: PreviewPathField(
                         label='%s%s' % (fname, PATH_SUFFIX.lower()) , 
                         required=False)})
 
-                if isinstance(field, PreviewField):
-                    namespace['base_fields'].update({
-                        fname + PREVIEW_SUFFIX: forms.Field(
-                            label='%s%s' % (fname, PREVIEW_SUFFIX.lower()),
-                            required=False,
-                            widget=((self.stage == 'preview' and self.method == 'post') and field.preview_widget or forms.HiddenInput))})
+            if isinstance(field, PreviewField):
+                additional_fields.update({
+                    fname + PREVIEW_SUFFIX: forms.Field(
+                        label='%s%s' % (fname, PREVIEW_SUFFIX.lower()),
+                        required=False,
+                        widget=((self.stage == 'preview' and self.method == 'post') and field.preview_widget or forms.HiddenInput))})
 
-            elif isinstance(field, forms.ImageField):
-                namespace['base_fields'].update({
-                    fname + PATH_SUFFIX: PreviewPathField(
-                        label='%s path' % fname, 
-                        required=False)})
+        def init_wrapper(self, *args, **kwargs):
+            """
+            Post init stage to update `fields` property
+            """
+            super(self.__class__, self).__init__(*args, **kwargs)
+            self.fields.update(additional_fields)
 
-        self._preview_form_klass = type(name, (base,), namespace)
+        self._preview_form_klass = type(name, bases, namespace)
+        self._preview_form_klass.__init__ = init_wrapper
         self._preview_form_klass.full_clean = full_clean(self.stage, self.method)
 
+        #assert self._form_klass.__dict__['base_fields'] != self._preview_form_klass.__dict__['base_fields'], 'preview & original forms are equal'
         return self._preview_form_klass
 
     def __call__(self, request, *args, **kwargs):
@@ -140,14 +142,16 @@ class FileFormPreview(object):
         UPD: takes FILES, gives original form
         """
         f = self.form(request.POST, request.FILES, auto_id=self.get_auto_id())
-        context = self.get_context(request, f)
+        orig_form = self._form_klass(request.POST, request.FILES)
         if f.is_valid():
+            context = self.get_context(request, f)
             self.process_preview(request, f, context)
             context['hash_field'] = self.unused_name('hash')
             context['hash_value'] = self.security_hash(request, f)
-            context['original_form'] = self._form_klass(request.POST, request.FILES)
+            context['original_form'] = orig_form
             return render_to_response(self.preview_template, context, context_instance=RequestContext(request))
         else:
+            context = self.get_context(request, orig_form)
             return render_to_response(self.form_template, context, context_instance=RequestContext(request))
 
     def _check_security_hash(self, token, request, form):
@@ -155,21 +159,7 @@ class FileFormPreview(object):
         if constant_time_compare(token, expected):
             return True
         else:
-            # Fall back to Django 1.2 method, for compatibility with forms that
-            # are in the middle of being used when the upgrade occurs. However,
-            # we don't want to do this fallback if a subclass has provided their
-            # own security_hash method - because they might have implemented a
-            # more secure method, and this would punch a hole in that.
-
-            # PendingDeprecationWarning <- left here to remind us that this
-            # compatibility fallback should be removed in Django 1.5
-            FormPreview_expected = FormPreview.security_hash(self, request, form)
-            if expected == FormPreview_expected:
-                # They didn't override security_hash, do the fallback:
-                old_expected = security_hash(request, form)
-                return constant_time_compare(token, old_expected)
-            else:
-                return False
+            return False
 
     def post_post(self, request):
         """
@@ -184,6 +174,7 @@ class FileFormPreview(object):
                 return self.failed_hash(request) # Security hash failed.
             return self.done(request, f.cleaned_data)
         else:
+            f = self._form_klass(request.POST, request.FILES, auto_id=self.get_auto_id())
             return render_to_response(self.form_template,
                 self.get_context(request, f),
                 context_instance=RequestContext(request))

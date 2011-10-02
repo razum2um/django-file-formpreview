@@ -45,7 +45,7 @@ def security_hash(form, *args):
 
         # work around as we cannot (needn't) pickle files
         if isinstance(value, InMemoryUploadedFile):
-            data.append((bf.name, value.size))
+            data.append((bf.name, value.name))
         else:
             data.append((bf.name, value))
         

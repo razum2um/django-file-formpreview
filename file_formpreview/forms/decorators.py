@@ -46,7 +46,7 @@ def full_clean(stage, method):
         if stage == 'post' and method == 'post':
             for fname, field in form.fields.items():
                 if isinstance(field, PreviewPathField):
-                    original_fname = fname.replace(SUFFIX, '')
+                    original_fname = fname.replace(PATH_SUFFIX, '')
                     form.fields.pop(original_fname)
 
         super(form.__class__, form).full_clean()
@@ -75,7 +75,7 @@ def full_clean(stage, method):
                             if int(name) <= int(todays_dir) - OUTDATED_DAYS:
                                 outdates_dirs.append(name)
                     for outdated in outdates_dirs:
-                        shutil.rmtree(os.path.join(upload_dir, outdated))
+                        shutil.rmtree(os.path.join(UPLOAD_DIR, outdated))
 
                     fd = tempfile.NamedTemporaryFile(dir=tmp_dir, delete=False)
                     fd_name = os.sep.join((tmp_dir, form.files[fname].name))
@@ -94,10 +94,10 @@ def full_clean(stage, method):
                     form.cleaned_data[path_fname] = fd.name  # in view
                     form.data[path_fname] = fd.name  # in template, as initial
 
-                    #if isinstance(field, PreviewField):
-                    #    preview_fname = fname + PREVIEW_SUFFIX
-                    #    form.cleaned_data[preview_fname] = fd  # in view
-                    #    form.data[preview_fname] = fd  # in template, as initial
+                    if isinstance(field, PreviewImageField):
+                        preview_fname = fname + PREVIEW_SUFFIX
+                        form.cleaned_data[preview_fname] = fd.name  # in view
+                        form.data[preview_fname] = fd.name  # in template, as initial
 
 
         elif stage == 'post' and method == 'post':
