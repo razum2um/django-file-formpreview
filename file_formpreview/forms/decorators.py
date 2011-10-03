@@ -18,94 +18,99 @@ PATH_SUFFIX = getattr(settings, 'PATH_SUFFIX', '_path')  # suffix to preview fie
 UPLOAD_DIR = getattr(settings, 'UPLOAD_DIR', os.path.join(settings.MEDIA_ROOT, 'preview'))
 OUTDATED_DAYS = getattr(settings, 'OUTDATED_DAYS', 2)  # mark yesterdays dirs for deletion
 
+TODAYS_DIR = datetime.now().strftime('%Y%m%d')
+
 if OUTDATED_DAYS < 2:
-    OUTDATED_DAYS = 2  # dont allow to remove todays temponaries
+    OUTDATED_DAYS = 2  # dont allow to remove yesterdays temponaries
 
-def full_clean(stage, method):
+def upload_cleanup():
     """
-    A decorator, that returns different ``full_clean`` methods
-    depending on the stage
+    Autoclean all previous files because in current format
+    int(yesterday_name) < int(today_name)
+    """
+    outdates_dirs = []
+    for name in os.listdir(UPLOAD_DIR):
+        try:
+            int(name)
+        except ValueError:
+            outdates_dirs.append(name)
+        else:
+            if int(name) <= int(TODAYS_DIR) - OUTDATED_DAYS:
+                outdates_dirs.append(name)
+    for outdated in outdates_dirs:
+        shutil.rmtree(os.path.join(UPLOAD_DIR, outdated))
 
-    Trick is:
-    in ``preview_post`` stage after running ``full_clean`` on original form
+def preview_full_clean(form):
+    """
+    In ``preview_post`` stage after running ``full_clean`` on original form
         - it drops all file fields and fill-in *_path fields
 
     because after in ``post_post`` stage it wont pass validation anyway,
     user doesn't upload file twice
 
-    in ``post_post`` stage it just:
+    """
+
+    super(form.__class__, form).full_clean()
+
+    file_fields = [(fname, field) for fname, field in form.fields.iteritems()
+        if isinstance(field, forms.FileField)]
+
+    for fname, field in file_fields:
+        tmp_dir = os.path.join(
+            UPLOAD_DIR,
+            TODAYS_DIR,
+            security_hash(form)) 
+        mkdir_p(tmp_dir)
+
+        upload_cleanup()
+
+        upload = form.cleaned_data[fname]
+
+        if not upload:
+            return  # just nop
+
+        fd_name = os.sep.join((tmp_dir, upload.name))
+        fd = open(fd_name, 'w')
+        for chunk in upload.chunks():
+            fd.write(chunk)
+        fd.flush()
+
+        # required for ImageField: django uses just .read() 
+        # into PIL.Image() - otherwise it will be given empty file
+        upload.seek(0)
+
+        form.fields.pop(fname)
+
+        path_fname = fname + PATH_SUFFIX
+        form.cleaned_data[path_fname] = fd.name  # in view
+        form.data[path_fname] = fd.name  # in template, as initial
+
+        if isinstance(field, PreviewField):
+            preview_fname = fname + PREVIEW_SUFFIX
+            form.cleaned_data[preview_fname] = fd.name  # in view
+            form.data[preview_fname] = fd.name  # in template, as initial
+
+def post_full_clean(form):
+    """
+    In ``post_post`` stage it just:
         - removes file fields BEFORE validation (no upload was done)
         - pushes tmp-paths into 'cleaned_data'
 
-    as user is interested in that vary value in `done` function,
+    As user is interested in that vary value in `done` function,
     anyway, ModelForm uses it for saving instance, too
     """
-    def wrapper(form):
+    for fname, field in form.fields.items():
+        if isinstance(field, PreviewPathField):
+            original_fname = fname.replace(PATH_SUFFIX, '')
+            form.fields.pop(original_fname)
 
-        if stage == 'post' and method == 'post':
-            for fname, field in form.fields.items():
-                if isinstance(field, PreviewPathField):
-                    original_fname = fname.replace(PATH_SUFFIX, '')
-                    form.fields.pop(original_fname)
+    super(form.__class__, form).full_clean()
 
-        super(form.__class__, form).full_clean()
-
-        if stage == 'preview' and method == 'post':
-            for fname, field in form.fields.items():
-                if isinstance(field, forms.FileField) or \
-                        isinstance(field, forms.ImageField):
-
-                    todays_dir = datetime.now().strftime('%Y%m%d')
-                    tmp_dir = os.path.join(
-                        UPLOAD_DIR,
-                        todays_dir,
-                        security_hash(form)) 
-                    mkdir_p(tmp_dir)
-
-                    # autoclean all previous files because in this format
-                    # int(yesterday_name) < int(today_name)
-                    outdates_dirs = []
-                    for name in os.listdir(UPLOAD_DIR):
-                        try:
-                            int(name)
-                        except ValueError:
-                            outdates_dirs.append(name)
-                        else:
-                            if int(name) <= int(todays_dir) - OUTDATED_DAYS:
-                                outdates_dirs.append(name)
-                    for outdated in outdates_dirs:
-                        shutil.rmtree(os.path.join(UPLOAD_DIR, outdated))
-
-                    upload = form.cleaned_data[fname]
-                    fd_name = os.sep.join((tmp_dir, upload.name))
-                    fd = open(fd_name, 'w')
-                    for chunk in upload.chunks():
-                        fd.write(chunk)
-                    fd.flush()
-
-                    # required for ImageField: django uses just .read() 
-                    # into PIL.Image() - otherwise it will be given empty file
-                    upload.seek(0)
-
-                    form.fields.pop(fname)
-
-                    path_fname = fname + PATH_SUFFIX
-                    form.cleaned_data[path_fname] = fd.name  # in view
-                    form.data[path_fname] = fd.name  # in template, as initial
-
-                    if isinstance(field, PreviewField):
-                        preview_fname = fname + PREVIEW_SUFFIX
-                        form.cleaned_data[preview_fname] = fd.name  # in view
-                        form.data[preview_fname] = fd.name  # in template, as initial
-
-        elif stage == 'post' and method == 'post':
-            for fname, field in form.fields.items():
-                if isinstance(field, PreviewPathField):
-                    original_fname = fname.replace(PATH_SUFFIX, '')
-                    fd = StringIO()
-                    with open(form.cleaned_data[fname]) as tmp_file:
-                        fd.write(tmp_file.read())
-                    fd.seek(0)
-                    form.cleaned_data[original_fname] = fd
-
-    return wrapper
+    for fname, field in form.fields.items():
+        if isinstance(field, PreviewPathField):
+            original_fname = fname.replace(PATH_SUFFIX, '')
+            fd = StringIO()
+            with open(form.cleaned_data[fname]) as tmp_file:
+                fd.write(tmp_file.read())
+            fd.seek(0)
+            form.cleaned_data[original_fname] = fd

@@ -18,7 +18,7 @@ from django.template.context import RequestContext
 from django.utils.hashcompat import md5_constructor
 from django.utils.crypto import constant_time_compare
 
-from file_formpreview.forms.decorators import full_clean
+from file_formpreview.forms.decorators import preview_full_clean, post_full_clean
 from file_formpreview.forms.utils import security_hash
 from file_formpreview.forms.fields import *
 from file_formpreview.forms.widgets import *
@@ -72,7 +72,7 @@ class FileFormPreview(object):
         
         additional_fields = {}
         for fname, field in namespace['base_fields'].iteritems():
-            if isinstance(field, forms.FileField) or isinstance(field, forms.ImageField):
+            if isinstance(field, forms.FileField):
                 additional_fields.update({
                     fname + PATH_SUFFIX: PreviewPathField(
                         label='%s%s' % (fname, PATH_SUFFIX.lower()) , 
@@ -83,7 +83,8 @@ class FileFormPreview(object):
                     fname + PREVIEW_SUFFIX: forms.Field(
                         label='%s%s' % (fname, PREVIEW_SUFFIX.lower()),
                         required=False,
-                        widget=((self.stage == 'preview' and self.method == 'post') and field.preview_widget or forms.HiddenInput))})
+                        widget=((self.stage == 'preview' and self.method == 'post') and \
+                                field.preview_widget or forms.HiddenInput))})
 
         def init_wrapper(self, *args, **kwargs):
             """
@@ -94,7 +95,11 @@ class FileFormPreview(object):
 
         self._preview_form_klass = type(name, bases, namespace)
         self._preview_form_klass.__init__ = init_wrapper
-        self._preview_form_klass.full_clean = full_clean(self.stage, self.method)
+
+        if self.stage == 'preview' and self.method == 'post':
+            self._preview_form_klass.full_clean = preview_full_clean
+        elif self.stage == 'post' and self.method == 'post':
+            self._preview_form_klass.full_clean = post_full_clean
 
         #assert self._form_klass.__dict__['base_fields'] != self._preview_form_klass.__dict__['base_fields'], 'preview & original forms are equal'
         return self._preview_form_klass
