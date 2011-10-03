@@ -76,9 +76,9 @@ def full_clean(stage, method):
                     for outdated in outdates_dirs:
                         shutil.rmtree(os.path.join(UPLOAD_DIR, outdated))
 
-                    fd_name = os.sep.join((tmp_dir, form.files[fname].name))
+                    upload = form.cleaned_data[fname]
+                    fd_name = os.sep.join((tmp_dir, upload.name))
                     fd = open(fd_name, 'w')
-                    upload = form.files[fname]
                     for chunk in upload.chunks():
                         fd.write(chunk)
                     fd.flush()
@@ -97,10 +97,6 @@ def full_clean(stage, method):
                         preview_fname = fname + PREVIEW_SUFFIX
                         form.cleaned_data[preview_fname] = fd.name  # in view
                         form.data[preview_fname] = fd.name  # in template, as initial
-
-                        if hasattr(self, 'parse_%s' % name):
-                            value = getattr(self, 'clean_%s' % name)()
-                            self.cleaned_data[name] = value
 
         elif stage == 'post' and method == 'post':
             for fname, field in form.fields.items():
