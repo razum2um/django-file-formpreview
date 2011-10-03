@@ -12,8 +12,10 @@
     </tr>
     {% endfor %}
 </table>
+<h2>Hash: {{ hash_value }}</h2>
 
 <form action="" enctype="multipart/form-data" method="post">{% csrf_token %}
+    {% if field.errors %}Incorrect preview form: {{ field.errors }}{% endif %}
     {% for field in form %}
         {{ field.as_hidden }}
     {% endfor %}
@@ -26,7 +28,10 @@
 
 <form action="" enctype="multipart/form-data" method="post">{% csrf_token %}
     <table>
-        {{ original_form }}
+        {% for field in original_form %}
+            {% if field.errors %}Incorrect original form: {{ field.errors }}{% endif %}
+            {{ field.label }}: {{ field }}
+        {% endfor %}
     </table>
     <input type="hidden" name="{{ stage_field }}" value="1" />
     <p><input type="submit" value="Preview" /></p>

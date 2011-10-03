@@ -10,6 +10,9 @@ from django.conf import settings
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.utils.hashcompat import md5_constructor
 
+PREVIEW_SUFFIX = getattr(settings, 'PREVIEW_SUFFIX', '_preview')  # suffix to preview fields
+PATH_SUFFIX = getattr(settings, 'PATH_SUFFIX', '_path')  # suffix to preview fields
+
 # helper for shell `mkdir -p` equivalent
 def mkdir_p(path):
     try:
@@ -36,18 +39,25 @@ def security_hash(form, *args):
     for bf in form:
         # Get the value from the form data. If the form allows empty or hasn't
         # changed then don't call clean() to avoid trigger validation errors.
+        name = bf.name
         if form.empty_permitted and not form.has_changed():
             value = bf.data or ''
         else:
             value = bf.field.clean(bf.data) or ''
-        if isinstance(value, basestring):
-            value = value.strip()
 
-        # work around as we cannot (needn't) pickle files
-        if isinstance(value, InMemoryUploadedFile):
-            data.append((bf.name, value.name))
+        if name.endswith(PREVIEW_SUFFIX):
+            pass
+        elif name.endswith(PATH_SUFFIX):
+            value = value.strip()
+            #pass
+        elif isinstance(value, basestring):
+            value = value.strip()
         else:
-            data.append((bf.name, value))
+            # work around as we cannot (needn't) pickle files
+            #if isinstance(value, InMemoryUploadedFile):
+            data.append((bf.name, value.name))
+            #else:
+            #    data.append((bf.name, value))
         
     data.extend(args)
     data.append(settings.SECRET_KEY)

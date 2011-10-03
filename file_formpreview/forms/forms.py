@@ -159,6 +159,7 @@ class FileFormPreview(object):
         if constant_time_compare(token, expected):
             return True
         else:
+            raise
             return False
 
     def post_post(self, request):

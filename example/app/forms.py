@@ -5,7 +5,7 @@ from file_formpreview.forms.forms import FileFormPreview
 
 class MyForm(forms.Form):
     raw_file = PreviewFileField(u'Raw file')
-    #image_file = PreviewImageField(u'Image')
+    image_file = PreviewImageField(u'Image')
 
 class MyFileFormPreview(FileFormPreview):
     pass
