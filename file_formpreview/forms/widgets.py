@@ -2,7 +2,7 @@ from django import forms
 from django.conf import settings
 from django.utils.safestring import mark_safe
 
-__all__ = ('PreviewWidget', 'PreviewFileWidget', 'PreviewImageWidget')
+__all__ = ('PreviewWidget', 'PreviewFileWidget', 'PreviewImageWidget', 'PreviewCSVFileWidget')
 
 
 PREVIEW_SUFFIX = getattr(settings, 'PREVIEW_SUFFIX', '_preview')  # suffix to preview fields
@@ -11,6 +11,17 @@ class PreviewWidget(forms.Widget):
     pass
 
 class PreviewFileWidget(PreviewWidget):
+    def value_from_datadict(self, data, files, name):
+        return files.get(name.replace(PREVIEW_SUFFIX, ''), None)
+
+    def render(self, name, fd, attrs=None):
+        if not fd:
+            return mark_safe('')
+        fd.seek(0)
+        rendered = fd.read(1024)
+        return mark_safe(rendered)
+
+class PreviewCSVFileWidget(PreviewWidget):
     def value_from_datadict(self, data, files, name):
         return files.get(name.replace(PREVIEW_SUFFIX, ''), None)
 

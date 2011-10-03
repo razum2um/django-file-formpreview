@@ -3,7 +3,7 @@ from django import forms
 from file_formpreview.forms.widgets import *
 
 __all__ = ('PreviewField', 'PreviewPathField',
-        'PreviewFileField', 'PreviewImageField')
+        'PreviewFileField', 'PreviewImageField', 'PreviewCSVFileField')
 
 
 class PreviewField(object):
@@ -13,32 +13,34 @@ class PreviewField(object):
     Owerride them directly
     """
     pass
-    #preview_widget = PreviewFileWidget
-    #@property
-    #def widget(self):
-    #    raise NotImplementedError(
-    #        "Define wigdet property in your %(cls)s declaration" % \
-    #        self.__class__.__name__)
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, **kwargs):
         """ Detect some missing arguments passed to __init__ """
 
         if 'preview_widget' in kwargs:
             self.preview_widget = kwargs.pop('preview_widget')
 
-        # as THIS class is first in __bases__ -> we cannot call ``super``
-        # FIXME: make it more explicit
-        assert len(self.__class__.__bases__) == 2, ('Please, \
-            use multiple inheritance for %(cls)s' % self.__class__.__name__)
-
-        field_klass = self.__class__.__bases__[1]
-        field_klass.__init__(self, *args, **kwargs)
+        if isinstance(self, forms.ImageField):
+            forms.ImageField.__init__(self, **kwargs)
+        elif isinstance(self, forms.FileField):
+            forms.FileField.__init__(self, **kwargs)
+        else:
+            super(self.__class__, self).__init__(**kwargs)
         
 
 # these are for you: define your form fieldswith them
 
 class PreviewFileField(PreviewField, forms.FileField):
     preview_widget = PreviewFileWidget
+
+class PreviewCSVFileField(PreviewFileField):
+    preview_widget = PreviewCSVFileWidget
+
+    def to_python(self, data):
+        """
+        Checks if file is CSV-parseable
+        """
+        pass
 
 class PreviewImageField(PreviewField, forms.ImageField):
     preview_widget = PreviewImageWidget

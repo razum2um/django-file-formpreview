@@ -98,6 +98,9 @@ def full_clean(stage, method):
                         form.cleaned_data[preview_fname] = fd.name  # in view
                         form.data[preview_fname] = fd.name  # in template, as initial
 
+                        if hasattr(self, 'parse_%s' % name):
+                            value = getattr(self, 'clean_%s' % name)()
+                            self.cleaned_data[name] = value
 
         elif stage == 'post' and method == 'post':
             for fname, field in form.fields.items():
